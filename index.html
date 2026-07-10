@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>峡谷消消乐</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="game-shell">
+      <section class="arena" aria-label="峡谷消消乐游戏区域">
+        <div class="skyline" aria-hidden="true">
+          <span class="tower tower-left"></span>
+          <span class="tower tower-right"></span>
+          <span class="river river-a"></span>
+          <span class="river river-b"></span>
+          <span class="spark spark-1"></span>
+          <span class="spark spark-2"></span>
+          <span class="spark spark-3"></span>
+        </div>
+
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">峡谷开麦 · 连爆挑战</p>
+            <h1 class="logo" aria-label="峡谷消消乐">峡谷消消乐</h1>
+          </div>
+          <div class="resource-note" title="真实英雄图片和原声需要你提供授权素材包后接入">
+            授权素材模式
+          </div>
+        </header>
+
+        <section class="hud" aria-label="当前战局数据">
+          <div class="hud-tile">
+            <span>分数</span>
+            <strong id="score">0</strong>
+          </div>
+          <div class="hud-tile">
+            <span>步数</span>
+            <strong id="moves">28</strong>
+          </div>
+          <div class="hud-tile">
+            <span>连击</span>
+            <strong id="combo">0</strong>
+          </div>
+          <div class="hud-tile">
+            <span>目标</span>
+            <strong id="target">4500</strong>
+          </div>
+        </section>
+
+        <section class="battlefield">
+          <aside class="side-panel">
+            <div class="panel-title">本局开麦</div>
+            <div id="voiceFeed" class="voice-feed" aria-live="polite"></div>
+          </aside>
+
+          <div class="board-wrap">
+            <div id="banner" class="banner" aria-live="assertive"></div>
+            <div id="board" class="board" aria-label="消除棋盘"></div>
+          </div>
+
+          <aside class="side-panel right-panel">
+            <div class="panel-title">羁绊彩蛋</div>
+            <div id="bondList" class="bond-list"></div>
+            <button id="shuffleBtn" class="icon-button" type="button" title="重整棋盘">↻</button>
+            <button id="soundBtn" class="icon-button active" type="button" title="声音开关">♪</button>
+          </aside>
+        </section>
+
+        <footer class="bottombar">
+          <button id="newGameBtn" class="primary-button" type="button">新开一局</button>
+          <div class="tip" id="tip">交换相邻头像，凑齐三个以上即可触发开麦消除。</div>
+        </footer>
+      </section>
+
+      <section id="resultModal" class="modal hidden" aria-live="assertive">
+        <div class="modal-card">
+          <p class="eyebrow">战局回放</p>
+          <h2 id="resultTitle">峡谷开麦成功</h2>
+          <div class="result-stats">
+            <span id="finalScore">0 分</span>
+            <span id="bestCombo">最高 0 连</span>
+            <span id="mvpHero">MVP：-</span>
+          </div>
+          <p id="resultCopy" class="result-copy"></p>
+          <button id="playAgainBtn" class="primary-button" type="button">再来一局</button>
+        </div>
+      </section>
+    </main>
+
+    <script src="./game.js"></script>
+  </body>
+</html>
