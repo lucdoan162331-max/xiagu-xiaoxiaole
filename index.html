@@ -2,89 +2,71 @@
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>峡谷消消乐</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#fff7d6" />
+    <title>贴贴消消乐</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <main class="game-shell">
-      <section class="arena" aria-label="峡谷消消乐游戏区域">
-        <div class="skyline" aria-hidden="true">
-          <span class="tower tower-left"></span>
-          <span class="tower tower-right"></span>
-          <span class="river river-a"></span>
-          <span class="river river-b"></span>
-          <span class="spark spark-1"></span>
-          <span class="spark spark-2"></span>
-          <span class="spark spark-3"></span>
-        </div>
+    <main class="phone-game" aria-label="贴贴消消乐">
+      <section class="stage">
+        <header class="hud">
+          <button id="pauseBtn" class="round-button pause" type="button" aria-label="暂停">
+            <span></span>
+            <span></span>
+          </button>
 
-        <header class="topbar">
-          <div>
-            <p class="eyebrow">峡谷开麦 · 连爆挑战</p>
-            <h1 class="logo" aria-label="峡谷消消乐">峡谷消消乐</h1>
+          <div class="progress-wrap" aria-label="清空进度">
+            <div id="progressBar" class="progress-bar"></div>
+            <div id="progressPet" class="progress-pet"></div>
           </div>
-          <div class="resource-note" title="真实英雄图片和原声需要你提供授权素材包后接入">
-            授权素材模式
+
+          <div class="score-pill" aria-label="当前分数">
+            <span id="score">0</span>
+            <i></i>
           </div>
         </header>
 
-        <section class="hud" aria-label="当前战局数据">
-          <div class="hud-tile">
-            <span>分数</span>
-            <strong id="score">0</strong>
-          </div>
-          <div class="hud-tile">
-            <span>步数</span>
-            <strong id="moves">28</strong>
-          </div>
-          <div class="hud-tile">
-            <span>连击</span>
-            <strong id="combo">0</strong>
-          </div>
-          <div class="hud-tile">
-            <span>目标</span>
-            <strong id="target">4500</strong>
-          </div>
+        <section class="board-zone">
+          <div id="banner" class="banner" aria-live="assertive"></div>
+          <div id="board" class="board" aria-label="消除棋盘"></div>
+          <div id="hand" class="hand hidden" aria-hidden="true"></div>
         </section>
 
-        <section class="battlefield">
-          <aside class="side-panel">
-            <div class="panel-title">本局开麦</div>
-            <div id="voiceFeed" class="voice-feed" aria-live="polite"></div>
-          </aside>
-
-          <div class="board-wrap">
-            <div id="banner" class="banner" aria-live="assertive"></div>
-            <div id="board" class="board" aria-label="消除棋盘"></div>
-          </div>
-
-          <aside class="side-panel right-panel">
-            <div class="panel-title">羁绊彩蛋</div>
-            <div id="bondList" class="bond-list"></div>
-            <button id="shuffleBtn" class="icon-button" type="button" title="重整棋盘">↻</button>
-            <button id="soundBtn" class="icon-button active" type="button" title="声音开关">♪</button>
-          </aside>
-        </section>
-
-        <footer class="bottombar">
-          <button id="newGameBtn" class="primary-button" type="button">新开一局</button>
-          <div class="tip" id="tip">交换相邻头像，凑齐三个以上即可触发开麦消除。</div>
+        <footer class="tool-row" aria-label="道具">
+          <button id="hintBtn" class="tool-button" type="button" aria-label="提示">
+            <span class="tool-icon magnifier"></span>
+            <b id="hintCount">3</b>
+          </button>
+          <button id="bombBtn" class="tool-button" type="button" aria-label="炸弹">
+            <span class="tool-icon bomb"></span>
+            <b id="bombCount">2</b>
+          </button>
+          <button id="shuffleBtn" class="tool-button" type="button" aria-label="洗牌">
+            <span class="tool-icon shuffle"></span>
+            <b id="shuffleCount">2</b>
+          </button>
+          <button id="soundBtn" class="sound-button on" type="button" aria-label="声音开关">♪</button>
         </footer>
-      </section>
 
-      <section id="resultModal" class="modal hidden" aria-live="assertive">
-        <div class="modal-card">
-          <p class="eyebrow">战局回放</p>
-          <h2 id="resultTitle">峡谷开麦成功</h2>
-          <div class="result-stats">
-            <span id="finalScore">0 分</span>
-            <span id="bestCombo">最高 0 连</span>
-            <span id="mvpHero">MVP：-</span>
+        <section id="winPanel" class="win-panel hidden" aria-live="assertive">
+          <div class="win-pet">
+            <span class="crown"></span>
+            <span class="sparkle s1"></span>
+            <span class="sparkle s2"></span>
           </div>
-          <p id="resultCopy" class="result-copy"></p>
-          <button id="playAgainBtn" class="primary-button" type="button">再来一局</button>
-        </div>
+          <p>win</p>
+          <button id="nextBtn" class="play-button" type="button">下一关</button>
+        </section>
+
+        <section id="pausePanel" class="pause-panel hidden">
+          <div class="pause-box">
+            <h1>贴贴消消乐</h1>
+            <p>点相邻同款贴纸，清空整张小卡。</p>
+            <button id="resumeBtn" class="play-button" type="button">继续</button>
+            <button id="restartBtn" class="quiet-button" type="button">重来</button>
+          </div>
+        </section>
       </section>
     </main>
 

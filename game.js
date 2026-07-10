@@ -1,573 +1,536 @@
-const size = 8;
-const targetScore = 4500;
-const maxMoves = 28;
+const boardSize = 5;
 
-const heroes = [
-  {
-    id: "blade",
-    name: "曜刃",
-    mark: "刃",
-    quote: "剑光一闪，峡谷听令。",
-    color: "linear-gradient(135deg, #ff6f61, #f6c55d)",
-    image: "",
-    voice: "./assets/voices/blade.mp3",
-  },
-  {
-    id: "moon",
-    name: "月影",
-    mark: "月",
-    quote: "月色落下，连击升起。",
-    color: "linear-gradient(135deg, #8f7aff, #43dcc0)",
-    image: "",
-    voice: "./assets/voices/moon.mp3",
-  },
-  {
-    id: "flame",
-    name: "炽心",
-    mark: "焰",
-    quote: "这一击，燃到最后。",
-    color: "linear-gradient(135deg, #ff4d3d, #ffb347)",
-    image: "",
-    voice: "./assets/voices/flame.mp3",
-  },
-  {
-    id: "tide",
-    name: "澜歌",
-    mark: "澜",
-    quote: "浪潮会记住你的连消。",
-    color: "linear-gradient(135deg, #22c1c3, #1b8fd6)",
-    image: "",
-    voice: "./assets/voices/tide.mp3",
-  },
-  {
-    id: "star",
-    name: "星瞳",
-    mark: "星",
-    quote: "星轨已经排好阵了。",
-    color: "linear-gradient(135deg, #ffe66d, #7bdff2)",
-    image: "",
-    voice: "./assets/voices/star.mp3",
-  },
-  {
-    id: "forest",
-    name: "森守",
-    mark: "森",
-    quote: "草丛里，也有高光。",
-    color: "linear-gradient(135deg, #58d68d, #117a65)",
-    image: "",
-    voice: "./assets/voices/forest.mp3",
-  },
-  {
-    id: "thunder",
-    name: "霆鼓",
-    mark: "霆",
-    quote: "鼓点越快，爆得越响。",
-    color: "linear-gradient(135deg, #f9ca24, #6c5ce7)",
-    image: "",
-    voice: "./assets/voices/thunder.mp3",
-  },
-  {
-    id: "lotus",
-    name: "莲华",
-    mark: "莲",
-    quote: "花开一瞬，满屏清场。",
-    color: "linear-gradient(135deg, #fd79a8, #00cec9)",
-    image: "",
-    voice: "./assets/voices/lotus.mp3",
-  },
+const pets = [
+  { id: "momo", name: "粉桃", className: "pet-momo", tone: 523.25 },
+  { id: "pudding", name: "布丁", className: "pet-pudding", tone: 392.0 },
+  { id: "leaf", name: "芽芽", className: "pet-leaf", tone: 659.25 },
+  { id: "bear", name: "栗熊", className: "pet-bear", tone: 329.63 },
+  { id: "snow", name: "雪团", className: "pet-snow", tone: 587.33 },
 ];
 
-const bonds = [
-  { ids: ["blade", "moon"], title: "月下拔刀", text: "曜刃 + 月影同时开麦，额外加 600 分。" },
-  { ids: ["flame", "tide"], title: "水火不服", text: "炽心 + 澜歌互相抢话，生成一次爆裂播报。" },
-  { ids: ["forest", "star"], title: "草丛观星", text: "森守 + 星瞳触发隐藏吐槽字幕。" },
-  { ids: ["thunder", "lotus"], title: "雷打花开", text: "霆鼓 + 莲华进入 3 秒高能连爆。" },
+const levels = [
+  [
+    [0, 1, 2, 2, 2],
+    [0, 0, 1, 3, 4],
+    [4, 0, 3, 3, 4],
+    [4, 1, 0, 0, 2],
+    [4, 4, 1, 2, 2],
+  ],
+  [
+    [3, 3, 0, 1, 1],
+    [2, 3, 0, 4, 1],
+    [2, 2, 4, 4, 1],
+    [0, 2, 3, 0, 0],
+    [4, 4, 3, 3, 0],
+  ],
+  [
+    [1, 1, 2, 2, 4],
+    [3, 1, 0, 2, 4],
+    [3, 3, 0, 0, 4],
+    [2, 4, 4, 1, 1],
+    [2, 2, 3, 3, 1],
+  ],
+  [
+    [0, 2, 2, 3, 3],
+    [0, 0, 4, 4, 3],
+    [1, 0, 4, 2, 2],
+    [1, 1, 3, 3, 4],
+    [2, 1, 0, 4, 4],
+  ],
 ];
 
-let board = [];
-let selected = null;
-let score = 0;
-let moves = maxMoves;
-let combo = 0;
-let bestCombo = 0;
-let isBusy = false;
-let soundOn = true;
-let lastRemovedHeroes = [];
-let heroCounts = new Map();
-let audioContext = null;
-let matchingKeys = new Set();
+const state = {
+  board: [],
+  level: 0,
+  score: 0,
+  removed: 0,
+  total: boardSize * boardSize,
+  combo: 0,
+  locked: false,
+  tool: null,
+  hints: 3,
+  bombs: 2,
+  shuffles: 2,
+  sound: true,
+  audio: null,
+  musicTimer: null,
+  highlighted: new Set(),
+};
 
 const els = {
   board: document.querySelector("#board"),
-  score: document.querySelector("#score"),
-  moves: document.querySelector("#moves"),
-  combo: document.querySelector("#combo"),
-  target: document.querySelector("#target"),
   banner: document.querySelector("#banner"),
-  voiceFeed: document.querySelector("#voiceFeed"),
-  bondList: document.querySelector("#bondList"),
-  tip: document.querySelector("#tip"),
+  hand: document.querySelector("#hand"),
+  score: document.querySelector("#score"),
+  progressBar: document.querySelector("#progressBar"),
+  progressPet: document.querySelector("#progressPet"),
+  hintBtn: document.querySelector("#hintBtn"),
+  bombBtn: document.querySelector("#bombBtn"),
   shuffleBtn: document.querySelector("#shuffleBtn"),
   soundBtn: document.querySelector("#soundBtn"),
-  newGameBtn: document.querySelector("#newGameBtn"),
-  resultModal: document.querySelector("#resultModal"),
-  resultTitle: document.querySelector("#resultTitle"),
-  finalScore: document.querySelector("#finalScore"),
-  bestCombo: document.querySelector("#bestCombo"),
-  mvpHero: document.querySelector("#mvpHero"),
-  resultCopy: document.querySelector("#resultCopy"),
-  playAgainBtn: document.querySelector("#playAgainBtn"),
+  hintCount: document.querySelector("#hintCount"),
+  bombCount: document.querySelector("#bombCount"),
+  shuffleCount: document.querySelector("#shuffleCount"),
+  winPanel: document.querySelector("#winPanel"),
+  nextBtn: document.querySelector("#nextBtn"),
+  pauseBtn: document.querySelector("#pauseBtn"),
+  pausePanel: document.querySelector("#pausePanel"),
+  resumeBtn: document.querySelector("#resumeBtn"),
+  restartBtn: document.querySelector("#restartBtn"),
 };
 
-function randomHero() {
-  return heroes[Math.floor(Math.random() * heroes.length)];
-}
-
-function createTile(hero = randomHero(), special = null) {
-  return {
-    hero,
-    special,
-    id: `${hero.id}-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-  };
-}
-
-function startGame() {
-  score = 0;
-  moves = maxMoves;
-  combo = 0;
-  bestCombo = 0;
-  selected = null;
-  isBusy = false;
-  heroCounts = new Map();
-  lastRemovedHeroes = [];
-  els.resultModal.classList.add("hidden");
-  board = Array.from({ length: size }, () => Array.from({ length: size }, () => createTile()));
-  while (findMatches().length > 0) {
-    board = Array.from({ length: size }, () => Array.from({ length: size }, () => createTile()));
-  }
-  renderBonds();
-  updateHud();
+function startLevel(index = state.level) {
+  const source = levels[index % levels.length];
+  state.level = index % levels.length;
+  state.board = source.map((row, r) =>
+    row.map((type, c) => ({
+      type,
+      id: `${index}-${r}-${c}-${Math.random().toString(16).slice(2)}`,
+    })),
+  );
+  state.score = 0;
+  state.removed = 0;
+  state.combo = 0;
+  state.locked = false;
+  state.tool = null;
+  state.hints = 3;
+  state.bombs = 2;
+  state.shuffles = 2;
+  state.highlighted.clear();
+  els.winPanel.classList.add("hidden");
+  els.pausePanel.classList.add("hidden");
   render();
-  addVoice("系统", "峡谷已开局，第一波连爆正在路上。");
+  updateHud();
+  intro();
 }
 
 function render() {
   els.board.innerHTML = "";
-  for (let row = 0; row < size; row += 1) {
-    for (let col = 0; col < size; col += 1) {
-      const tile = board[row][col];
+  state.board.forEach((row, r) => {
+    row.forEach((tile, c) => {
+      const key = pointKey(r, c);
+      if (!tile) {
+        const empty = document.createElement("div");
+        empty.className = "empty-cell";
+        els.board.appendChild(empty);
+        return;
+      }
+
+      const pet = pets[tile.type];
       const button = document.createElement("button");
       button.type = "button";
-      button.className = `tile${selected?.row === row && selected?.col === col ? " selected" : ""}${matchingKeys.has(pointKey({ row, col })) ? " matching" : ""}${tile.special ? ` special-${tile.special}` : ""}`;
-      button.style.setProperty("--hero-gradient", tile.hero.color);
-      button.dataset.row = row;
-      button.dataset.col = col;
-      button.dataset.hero = tile.hero.id;
-      button.dataset.mark = tile.hero.mark;
-      button.title = `${tile.hero.name}：${tile.hero.quote}`;
-      button.setAttribute("aria-label", `${tile.hero.name}头像`);
-
-      if (tile.hero.image) {
-        button.classList.add("has-portrait");
-        const portrait = document.createElement("img");
-        portrait.className = "portrait";
-        portrait.src = tile.hero.image;
-        portrait.alt = "";
-        portrait.onerror = () => {
-          portrait.remove();
-          button.classList.remove("has-portrait");
-        };
-        button.appendChild(portrait);
-      }
-
-      if (tile.special) {
-        const badge = document.createElement("span");
-        badge.className = "badge";
-        badge.textContent = getSpecialMark(tile.special);
-        button.appendChild(badge);
-      }
-
-      button.addEventListener("click", () => handleTileClick(row, col));
+      button.className = `tile ${pet.className}${state.highlighted.has(key) ? " hinted" : ""}`;
+      button.dataset.row = r;
+      button.dataset.col = c;
+      button.setAttribute("aria-label", `${pet.name}贴纸`);
+      button.innerHTML = `
+        <span class="sticker">
+          <span class="ears"></span>
+          <span class="face">
+            <span class="eyes"></span>
+            <span class="mouth"></span>
+            <span class="blush"></span>
+          </span>
+        </span>
+      `;
+      button.addEventListener("click", () => handleTile(r, c));
       els.board.appendChild(button);
-    }
-  }
+    });
+  });
 }
 
-function getSpecialMark(special) {
-  return {
-    row: "横",
-    col: "纵",
-    bomb: "爆",
-    ultra: "大",
-  }[special];
+async function intro() {
+  state.locked = true;
+  showBanner("READY", "ready");
+  await wait(620);
+  showBanner("GO", "go");
+  await wait(460);
+  state.locked = false;
+  showHandHint();
 }
 
-async function handleTileClick(row, col) {
-  if (isBusy || moves <= 0) return;
+async function handleTile(row, col) {
+  if (state.locked) return;
   warmAudio();
+  hideHandHint();
 
-  if (!selected) {
-    selected = { row, col };
-    render();
+  if (state.tool === "bomb") {
+    await useBomb(row, col);
     return;
   }
 
-  if (selected.row === row && selected.col === col) {
-    selected = null;
-    render();
+  const group = collectGroup(row, col);
+  if (group.length < 2) {
+    tapNope(row, col);
+    playNope();
     return;
   }
 
-  if (!isAdjacent(selected, { row, col })) {
-    selected = { row, col };
-    render();
-    return;
-  }
+  await removeGroup(group, "tap");
+}
 
-  isBusy = true;
-  swap(selected, { row, col });
+async function removeGroup(group, source) {
+  state.locked = true;
+  state.highlighted = new Set(group.map(({ row, col }) => pointKey(row, col)));
   render();
-  await wait(150);
+  await wait(160);
 
-  const matches = findMatches();
-  const hasSpecialTrigger = board[selected.row][selected.col].special || board[row][col].special;
-  if (matches.length === 0 && !hasSpecialTrigger) {
-    swap(selected, { row, col });
-    combo = 0;
-    selected = null;
-    render();
-    updateHud();
-    isBusy = false;
-    return;
-  }
+  const pet = pets[state.board[group[0].row][group[0].col].type];
+  group.forEach(({ row, col }) => {
+    state.board[row][col] = null;
+  });
 
-  moves -= 1;
-  await resolveBoard(matches, [selected, { row, col }]);
-  selected = null;
+  state.removed += group.length;
+  state.combo += 1;
+  const bonus = group.length >= 5 ? 160 : group.length >= 4 ? 90 : group.length >= 3 ? 40 : 0;
+  state.score += group.length * 50 + bonus + Math.max(0, state.combo - 1) * 20;
+
+  state.highlighted.clear();
+  render();
   updateHud();
-  render();
-  isBusy = false;
-  checkGameEnd();
-}
+  popFloating(group, group.length >= 5 ? "PERFECT" : group.length >= 3 ? "GOOD" : "");
+  playPop(pet.tone, group.length, source);
 
-async function resolveBoard(initialMatches, movedTiles = []) {
-  let matches = initialMatches;
-  let cascade = 0;
-
-  while (matches.length > 0 || movedTiles.some((pos) => board[pos.row]?.[pos.col]?.special)) {
-    cascade += 1;
-    combo += 1;
-    bestCombo = Math.max(bestCombo, combo);
-    const clearSet = expandSpecialClears(matches, movedTiles);
-    const removed = [...clearSet].map(keyToPoint).map(({ row, col }) => board[row][col]).filter(Boolean);
-    lastRemovedHeroes = removed.map((tile) => tile.hero);
-
-    const preservedKey = maybeCreateSpecial(matches);
-    if (preservedKey) clearSet.delete(preservedKey);
-    matchingKeys = new Set(clearSet);
-    updateHud();
-    render();
-    await wait(250);
-
-    score += clearSet.size * 90 * Math.max(1, combo) + Math.max(0, clearSet.size - 3) * 120;
-    clearTiles(clearSet);
-    matchingKeys = new Set();
-    playMatchFeedback(removed, clearSet.size, cascade);
-    await wait(110);
-    collapseBoard();
-    refillBoard();
-    render();
+  if (group.length >= 4 && Math.random() > 0.35) {
     await wait(170);
-    matches = findMatches();
-    movedTiles = [];
+    showBanner("PERFECT", "perfect");
+  } else if (group.length >= 3) {
+    await wait(130);
+    showBanner("GOOD", "good");
   }
+
+  await wait(260);
+  if (isCleared() || remainingCount() <= 1) {
+    await clearFinalDust();
+    await win();
+    return;
+  }
+
+  if (availableGroups().length === 0) {
+    showBanner("道具时间", "good");
+    pulseTools();
+  }
+  state.locked = false;
 }
 
-function isAdjacent(a, b) {
-  return Math.abs(a.row - b.row) + Math.abs(a.col - b.col) === 1;
+async function useBomb(row, col) {
+  if (state.bombs <= 0) return;
+  state.bombs -= 1;
+  state.tool = null;
+  setToolMode(null);
+  const cells = [];
+  for (let r = row - 1; r <= row + 1; r += 1) {
+    for (let c = col - 1; c <= col + 1; c += 1) {
+      if (state.board[r]?.[c]) cells.push({ row: r, col: c });
+    }
+  }
+  if (cells.length === 0) {
+    updateHud();
+    return;
+  }
+  playBomb();
+  showBanner("POOF", "good");
+  await removeGroup(cells, "bomb");
 }
 
-function swap(a, b) {
-  [board[a.row][a.col], board[b.row][b.col]] = [board[b.row][b.col], board[a.row][a.col]];
+function useHint() {
+  if (state.locked || state.hints <= 0) return;
+  warmAudio();
+  const groups = availableGroups();
+  if (groups.length === 0) {
+    showBanner("没有成组", "good");
+    playNope();
+    return;
+  }
+  state.hints -= 1;
+  const best = groups.sort((a, b) => b.length - a.length)[0];
+  state.highlighted = new Set(best.map(({ row, col }) => pointKey(row, col)));
+  render();
+  updateHud();
+  playHint();
+  moveHandTo(best[Math.floor(best.length / 2)]);
+  window.setTimeout(() => {
+    state.highlighted.clear();
+    render();
+  }, 1600);
 }
 
-function findMatches() {
+function useShuffle() {
+  if (state.locked || state.shuffles <= 0) return;
+  warmAudio();
+  state.shuffles -= 1;
+  state.combo = 0;
+  const pieces = state.board.flat().filter(Boolean);
+  const positions = [];
+  state.board.forEach((row, r) => row.forEach((tile, c) => tile && positions.push({ row: r, col: c })));
+  const sorted = pieces.sort((a, b) => a.type - b.type || Math.random() - 0.5);
+  positions.forEach((pos, index) => {
+    state.board[pos.row][pos.col] = sorted[index];
+  });
+  playShuffle();
+  showBanner("SHUFFLE", "go");
+  render();
+  updateHud();
+}
+
+function collectGroup(row, col) {
+  const tile = state.board[row]?.[col];
+  if (!tile) return [];
+  const group = [];
+  const seen = new Set();
+  const queue = [{ row, col }];
+
+  while (queue.length) {
+    const current = queue.shift();
+    const key = pointKey(current.row, current.col);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const nextTile = state.board[current.row]?.[current.col];
+    if (!nextTile || nextTile.type !== tile.type) continue;
+    group.push(current);
+    [
+      { row: current.row - 1, col: current.col },
+      { row: current.row + 1, col: current.col },
+      { row: current.row, col: current.col - 1 },
+      { row: current.row, col: current.col + 1 },
+    ].forEach((next) => {
+      if (state.board[next.row]?.[next.col]) queue.push(next);
+    });
+  }
+
+  return group;
+}
+
+function availableGroups() {
+  const seen = new Set();
   const groups = [];
-
-  for (let row = 0; row < size; row += 1) {
-    let start = 0;
-    for (let col = 1; col <= size; col += 1) {
-      const current = board[row][col]?.hero.id;
-      const previous = board[row][col - 1]?.hero.id;
-      if (current !== previous) {
-        if (col - start >= 3) {
-          groups.push(rangeToGroup(row, start, col - 1, "row"));
-        }
-        start = col;
-      }
-    }
-  }
-
-  for (let col = 0; col < size; col += 1) {
-    let start = 0;
-    for (let row = 1; row <= size; row += 1) {
-      const current = board[row]?.[col]?.hero.id;
-      const previous = board[row - 1]?.[col]?.hero.id;
-      if (current !== previous) {
-        if (row - start >= 3) {
-          groups.push(rangeToGroup(start, col, row - 1, "col"));
-        }
-        start = row;
-      }
-    }
-  }
-
+  state.board.forEach((row, r) => {
+    row.forEach((tile, c) => {
+      const key = pointKey(r, c);
+      if (!tile || seen.has(key)) return;
+      const group = collectGroup(r, c);
+      group.forEach((cell) => seen.add(pointKey(cell.row, cell.col)));
+      if (group.length >= 2) groups.push(group);
+    });
+  });
   return groups;
 }
 
-function rangeToGroup(a, b, c, direction) {
-  const cells = [];
-  if (direction === "row") {
-    for (let col = b; col <= c; col += 1) cells.push({ row: a, col });
-  } else {
-    for (let row = a; row <= c; row += 1) cells.push({ row, col: b });
-  }
-  return { direction, cells };
+function updateHud() {
+  els.score.textContent = state.score;
+  const progress = Math.min(1, state.removed / state.total);
+  els.progressBar.style.width = `${progress * 100}%`;
+  els.progressPet.style.left = `${Math.max(0, Math.min(94, progress * 94))}%`;
+  els.hintCount.textContent = state.hints;
+  els.bombCount.textContent = state.bombs;
+  els.shuffleCount.textContent = state.shuffles;
+  els.hintBtn.disabled = state.hints <= 0;
+  els.bombBtn.disabled = state.bombs <= 0;
+  els.shuffleBtn.disabled = state.shuffles <= 0;
 }
 
-function expandSpecialClears(matches, movedTiles) {
-  const clearSet = new Set();
-  matches.forEach((group) => group.cells.forEach((cell) => clearSet.add(pointKey(cell))));
-  movedTiles.forEach((pos) => {
-    const tile = board[pos.row]?.[pos.col];
-    if (!tile?.special) return;
-    addSpecialClear(clearSet, pos, tile.special);
+function showBanner(text, tone = "") {
+  els.banner.textContent = text;
+  els.banner.className = `banner show ${tone}`;
+  window.setTimeout(() => {
+    els.banner.classList.remove("show");
+  }, 920);
+}
+
+function popFloating(group, label) {
+  group.forEach(({ row, col }, index) => {
+    const marker = document.createElement("span");
+    marker.className = "pop-star";
+    marker.style.left = `calc(${col} * (var(--cell) + var(--gap)) + var(--cell) * .5)`;
+    marker.style.top = `calc(${row} * (var(--cell) + var(--gap)) + var(--cell) * .5)`;
+    marker.style.animationDelay = `${index * 18}ms`;
+    els.board.appendChild(marker);
   });
 
-  [...clearSet].map(keyToPoint).forEach((pos) => {
-    const tile = board[pos.row]?.[pos.col];
-    if (tile?.special) addSpecialClear(clearSet, pos, tile.special);
+  if (!label) return;
+  const center = group[Math.floor(group.length / 2)];
+  const word = document.createElement("span");
+  word.className = "floating-word";
+  word.textContent = label;
+  word.style.left = `calc(${center.col} * (var(--cell) + var(--gap)) + var(--cell) * .12)`;
+  word.style.top = `calc(${center.row} * (var(--cell) + var(--gap)) + var(--cell) * .05)`;
+  els.board.appendChild(word);
+}
+
+async function win() {
+  state.locked = true;
+  playWin();
+  await wait(350);
+  els.winPanel.classList.remove("hidden");
+}
+
+function isCleared() {
+  return state.board.flat().every((tile) => tile === null);
+}
+
+async function clearFinalDust() {
+  const leftovers = [];
+  state.board.forEach((row, r) => {
+    row.forEach((tile, c) => {
+      if (tile) leftovers.push({ row: r, col: c });
+    });
   });
-
-  return clearSet;
+  if (leftovers.length === 0) return;
+  state.highlighted = new Set(leftovers.map(({ row, col }) => pointKey(row, col)));
+  render();
+  playHint();
+  await wait(220);
+  leftovers.forEach(({ row, col }) => {
+    state.board[row][col] = null;
+  });
+  state.removed += leftovers.length;
+  state.score += leftovers.length * 80 + 240;
+  state.highlighted.clear();
+  render();
+  updateHud();
+  showBanner("PERFECT", "perfect");
+  await wait(360);
 }
 
-function addSpecialClear(clearSet, pos, special) {
-  if (special === "row") {
-    for (let col = 0; col < size; col += 1) clearSet.add(pointKey({ row: pos.row, col }));
-  }
-  if (special === "col") {
-    for (let row = 0; row < size; row += 1) clearSet.add(pointKey({ row, col: pos.col }));
-  }
-  if (special === "bomb") {
-    for (let row = pos.row - 1; row <= pos.row + 1; row += 1) {
-      for (let col = pos.col - 1; col <= pos.col + 1; col += 1) {
-        if (board[row]?.[col]) clearSet.add(pointKey({ row, col }));
-      }
-    }
-  }
-  if (special === "ultra") {
-    const heroId = board[pos.row][pos.col].hero.id;
-    for (let row = 0; row < size; row += 1) {
-      for (let col = 0; col < size; col += 1) {
-        if (board[row][col].hero.id === heroId) clearSet.add(pointKey({ row, col }));
-      }
-    }
-  }
+function remainingCount() {
+  return state.board.flat().filter(Boolean).length;
 }
 
-function maybeCreateSpecial(matches) {
-  const longest = matches.reduce((winner, group) => (group.cells.length > winner.cells.length ? group : winner), { cells: [] });
-  if (longest.cells.length < 4) return null;
-  const anchor = longest.cells[Math.floor(longest.cells.length / 2)];
-  const hero = board[anchor.row][anchor.col].hero;
-  const special = longest.cells.length >= 5 ? "ultra" : longest.direction === "row" ? "row" : "col";
-  board[anchor.row][anchor.col] = createTile(hero, special);
-  return pointKey(anchor);
+function tapNope(row, col) {
+  const tile = els.board.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+  tile?.classList.add("nope");
+  window.setTimeout(() => tile?.classList.remove("nope"), 280);
 }
 
-function clearTiles(clearSet) {
-  clearSet.forEach((key) => {
-    const { row, col } = keyToPoint(key);
-    board[row][col] = null;
+function pulseTools() {
+  [els.bombBtn, els.shuffleBtn].forEach((button) => {
+    button.classList.add("pulse");
+    window.setTimeout(() => button.classList.remove("pulse"), 1200);
   });
 }
 
-function collapseBoard() {
-  for (let col = 0; col < size; col += 1) {
-    const survivors = [];
-    for (let row = size - 1; row >= 0; row -= 1) {
-      if (board[row][col]) survivors.push(board[row][col]);
-    }
-    for (let row = size - 1; row >= 0; row -= 1) {
-      board[row][col] = survivors[size - 1 - row] || null;
-    }
-  }
+function setToolMode(tool) {
+  state.tool = tool;
+  els.bombBtn.classList.toggle("active", tool === "bomb");
+  document.body.classList.toggle("aiming", tool === "bomb");
 }
 
-function refillBoard() {
-  for (let row = 0; row < size; row += 1) {
-    for (let col = 0; col < size; col += 1) {
-      if (!board[row][col]) board[row][col] = createTile();
-    }
-  }
+function showHandHint() {
+  const group = availableGroups().sort((a, b) => b.length - a.length)[0];
+  if (!group) return;
+  moveHandTo(group[Math.floor(group.length / 2)]);
 }
 
-function playMatchFeedback(removed, clearCount, cascade) {
-  if (removed.length === 0) return;
-  const hero = removed[Math.floor(Math.random() * removed.length)].hero;
-  heroCounts.set(hero.id, (heroCounts.get(hero.id) || 0) + 1);
-  addVoice(hero.name, hero.quote);
-  playHeroVoice(hero, cascade);
-  triggerBondIfNeeded(removed);
-
-  if (clearCount >= 24) {
-    showBanner("五杀清屏");
-    addVoice("峡谷播报", "满屏开花，这一波可以直接发朋友圈。");
-  } else if (combo >= 6) {
-    showBanner("峡谷发疯");
-  } else if (combo >= 4) {
-    showBanner("连爆暴走");
-  } else if (clearCount >= 5) {
-    showBanner("大招头像");
-  }
+function hideHandHint() {
+  els.hand.classList.add("hidden");
 }
 
-function triggerBondIfNeeded(removed) {
-  const ids = new Set(removed.map((tile) => tile.hero.id));
-  const bond = bonds.find((item) => item.ids.every((id) => ids.has(id)));
-  if (!bond) return;
-  score += 600;
-  addVoice("羁绊彩蛋", bond.text);
-  showBanner(bond.title);
-}
-
-function addVoice(name, quote) {
-  const line = document.createElement("div");
-  line.className = "voice-line";
-  line.innerHTML = `<strong>${name}</strong>：${quote}`;
-  els.voiceFeed.prepend(line);
-  while (els.voiceFeed.children.length > 6) {
-    els.voiceFeed.lastElementChild.remove();
-  }
-}
-
-function renderBonds() {
-  els.bondList.innerHTML = bonds
-    .map((bond) => `<div class="bond"><strong>${bond.title}</strong><br>${bond.text}</div>`)
-    .join("");
-}
-
-function playHeroVoice(hero, cascade) {
-  if (!soundOn) return;
-  const audio = new Audio(hero.voice);
-  audio.volume = 0.82;
-  audio.play().catch(() => playSyntheticVoice(cascade));
+function moveHandTo(cell) {
+  els.hand.classList.remove("hidden");
+  els.hand.style.left = `calc(${cell.col} * (var(--cell) + var(--gap)) + var(--cell) * .58)`;
+  els.hand.style.top = `calc(${cell.row} * (var(--cell) + var(--gap)) + var(--cell) * .55)`;
 }
 
 function warmAudio() {
-  if (!audioContext) {
-    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  if (!state.audio) {
+    state.audio = new (window.AudioContext || window.webkitAudioContext)();
   }
-  if (audioContext.state === "suspended") audioContext.resume();
+  if (state.audio.state === "suspended") state.audio.resume();
+  if (state.sound && !state.musicTimer) startMusic();
 }
 
-function playSyntheticVoice(cascade) {
-  warmAudio();
-  const now = audioContext.currentTime;
-  const notes = [220, 277, 330, 415, 554];
-  notes.slice(0, Math.min(5, 2 + cascade)).forEach((freq, index) => {
-    const osc = audioContext.createOscillator();
-    const gain = audioContext.createGain();
-    osc.type = index % 2 ? "triangle" : "sawtooth";
-    osc.frequency.setValueAtTime(freq + combo * 18, now + index * 0.045);
-    gain.gain.setValueAtTime(0.0001, now + index * 0.045);
-    gain.gain.exponentialRampToValueAtTime(0.08, now + index * 0.045 + 0.015);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + index * 0.045 + 0.16);
-    osc.connect(gain);
-    gain.connect(audioContext.destination);
-    osc.start(now + index * 0.045);
-    osc.stop(now + index * 0.045 + 0.17);
-  });
+function startMusic() {
+  const pattern = [523.25, 659.25, 783.99, 659.25, 587.33, 698.46, 783.99, 880.0];
+  let index = 0;
+  state.musicTimer = window.setInterval(() => {
+    if (!state.sound || !state.audio) return;
+    chime(pattern[index % pattern.length], 0.045, 0.055, "sine", 0.02);
+    if (index % 2 === 0) chime(pattern[(index + 2) % pattern.length] / 2, 0.035, 0.09, "triangle", 0.012);
+    index += 1;
+  }, 250);
 }
 
-function showBanner(text) {
-  els.banner.textContent = text;
-  els.banner.classList.remove("show");
-  void els.banner.offsetWidth;
-  els.banner.classList.add("show");
+function stopMusic() {
+  window.clearInterval(state.musicTimer);
+  state.musicTimer = null;
 }
 
-function updateHud() {
-  els.score.textContent = score;
-  els.moves.textContent = moves;
-  els.combo.textContent = combo;
-  els.target.textContent = targetScore;
-  els.tip.textContent =
-    combo >= 5
-      ? "高能状态：继续连消会触发更夸张的开麦播报。"
-      : moves <= 6
-        ? "最后几步，优先制造 4 连或 5 连技能头像。"
-        : "交换相邻头像，凑齐三个以上即可触发开麦消除。";
+function chime(freq, volume, length, type = "triangle", delay = 0) {
+  if (!state.sound || !state.audio) return;
+  const now = state.audio.currentTime + delay;
+  const osc = state.audio.createOscillator();
+  const gain = state.audio.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, now);
+  gain.gain.setValueAtTime(0.0001, now);
+  gain.gain.exponentialRampToValueAtTime(volume, now + 0.012);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + length);
+  osc.connect(gain);
+  gain.connect(state.audio.destination);
+  osc.start(now);
+  osc.stop(now + length + 0.02);
 }
 
-function checkGameEnd() {
-  if (score < targetScore && moves > 0) return;
-  const won = score >= targetScore;
-  const mvp = getMvpHero();
-  els.resultTitle.textContent = won ? "峡谷开麦成功" : "差一点就封神";
-  els.finalScore.textContent = `${score} 分`;
-  els.bestCombo.textContent = `最高 ${bestCombo} 连`;
-  els.mvpHero.textContent = `MVP：${mvp?.name || "-"}`;
-  els.resultCopy.textContent = won
-    ? "这一局已经有短视频名场面的味道了：连击、开麦、清屏，一口气都齐了。"
-    : "核心循环已经跑起来了，下一局多做技能头像，会更容易爆分。";
-  els.resultModal.classList.remove("hidden");
+function playPop(freq, count, source) {
+  if (!state.sound) return;
+  const steps = Math.min(6, count);
+  for (let i = 0; i < steps; i += 1) {
+    chime(freq * (1 + i * 0.08), 0.09, 0.11, i % 2 ? "sine" : "triangle", i * 0.035);
+  }
+  if (source === "bomb") chime(146.83, 0.12, 0.28, "sine", 0.02);
 }
 
-function getMvpHero() {
-  let winner = null;
-  let max = 0;
-  heroCounts.forEach((count, id) => {
-    if (count > max) {
-      max = count;
-      winner = heroes.find((hero) => hero.id === id);
-    }
-  });
-  return winner;
+function playHint() {
+  [880, 1174.66, 1567.98].forEach((freq, i) => chime(freq, 0.07, 0.09, "sine", i * 0.05));
 }
 
-function shuffleBoard() {
-  if (isBusy) return;
-  const flat = board.flat().sort(() => Math.random() - 0.5);
-  board = Array.from({ length: size }, (_, row) => flat.slice(row * size, row * size + size));
-  selected = null;
-  combo = 0;
-  addVoice("系统", "棋盘已重整，峡谷重新洗牌。");
-  render();
-  updateHud();
+function playNope() {
+  [220, 196].forEach((freq, i) => chime(freq, 0.06, 0.09, "triangle", i * 0.06));
 }
 
-function pointKey({ row, col }) {
+function playBomb() {
+  [164.81, 220, 329.63, 493.88].forEach((freq, i) => chime(freq, 0.1, 0.16, "sawtooth", i * 0.025));
+}
+
+function playShuffle() {
+  [392, 523.25, 392, 659.25, 523.25].forEach((freq, i) => chime(freq, 0.055, 0.08, "triangle", i * 0.045));
+}
+
+function playWin() {
+  [523.25, 659.25, 783.99, 1046.5, 1318.51].forEach((freq, i) => chime(freq, 0.09, 0.18, "sine", i * 0.09));
+}
+
+function pointKey(row, col) {
   return `${row}:${col}`;
 }
 
-function keyToPoint(key) {
-  const [row, col] = key.split(":").map(Number);
-  return { row, col };
-}
-
 function wait(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
-els.shuffleBtn.addEventListener("click", shuffleBoard);
-els.soundBtn.addEventListener("click", () => {
-  soundOn = !soundOn;
-  els.soundBtn.classList.toggle("active", soundOn);
-  els.soundBtn.title = soundOn ? "声音开关：开" : "声音开关：关";
+els.hintBtn.addEventListener("click", useHint);
+els.bombBtn.addEventListener("click", () => {
+  if (state.locked || state.bombs <= 0) return;
+  warmAudio();
+  setToolMode(state.tool === "bomb" ? null : "bomb");
+  playHint();
 });
-els.newGameBtn.addEventListener("click", startGame);
-els.playAgainBtn.addEventListener("click", startGame);
+els.shuffleBtn.addEventListener("click", useShuffle);
+els.soundBtn.addEventListener("click", () => {
+  state.sound = !state.sound;
+  els.soundBtn.classList.toggle("on", state.sound);
+  if (!state.sound) stopMusic();
+  if (state.sound) warmAudio();
+});
+els.nextBtn.addEventListener("click", () => startLevel(state.level + 1));
+els.pauseBtn.addEventListener("click", () => {
+  els.pausePanel.classList.remove("hidden");
+  state.locked = true;
+});
+els.resumeBtn.addEventListener("click", () => {
+  els.pausePanel.classList.add("hidden");
+  state.locked = false;
+});
+els.restartBtn.addEventListener("click", () => startLevel(state.level));
 
-startGame();
+startLevel(0);
